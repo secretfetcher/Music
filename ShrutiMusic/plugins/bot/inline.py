@@ -1,25 +1,3 @@
-# Copyright (c) 2025 Nand Yaduwanshi <NoxxOP>
-# Location: Supaul, Bihar
-#
-# All rights reserved.
-#
-# This code is the intellectual property of Nand Yaduwanshi.
-# You are not allowed to copy, modify, redistribute, or use this
-# code for commercial or personal projects without explicit permission.
-#
-# Allowed:
-# - Forking for personal learning
-# - Submitting improvements via pull requests
-#
-# Not Allowed:
-# - Claiming this code as your own
-# - Re-uploading without credit or permission
-# - Selling or using commercially
-#
-# Contact for permissions:
-# Email: badboy809075@gmail.com
-
-
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -33,69 +11,74 @@ from config import BANNED_USERS
 
 @app.on_inline_query(~BANNED_USERS)
 async def inline_query_handler(client, query):
-    text = query.query.strip().lower()
-    answers = []
-    if text.strip() == "":
+    text = query.query.strip()
+    results_list = []
+
+    # 🔹 Empty query → default panel
+    if not text:
         try:
-            await client.answer_inline_query(query.id, results=answer, cache_time=10)
+            return await client.answer_inline_query(
+                query.id,
+                results=answer,
+                cache_time=5,
+                is_personal=True
+            )
         except:
             return
-    else:
-        a = VideosSearch(text, limit=20)
-        result = (await a.next()).get("result")
-        for x in range(15):
-            title = (result[x]["title"]).title()
-            duration = result[x]["duration"]
-            views = result[x]["viewCount"]["short"]
-            thumbnail = result[x]["thumbnails"][0]["url"].split("?")[0]
-            channellink = result[x]["channel"]["link"]
-            channel = result[x]["channel"]["name"]
-            link = result[x]["link"]
-            published = result[x]["publishedTime"]
-            description = f"{views} | {duration} ᴍɪɴᴜᴛᴇs | {channel}  | {published}"
+
+    try:
+        search = VideosSearch(text, limit=15)
+        results = (await search.next()).get("result", [])
+
+        for vid in results:
+            title = vid["title"]
+            duration = vid.get("duration", "Live")
+            views = vid["viewCount"]["short"]
+            thumbnail = vid["thumbnails"][0]["url"].split("?")[0]
+            channel = vid["channel"]["name"]
+            channellink = vid["channel"]["link"]
+            link = vid["link"]
+            published = vid["publishedTime"]
+
+            description = f"{views} • {duration} • {channel}"
+
             buttons = InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton(
-                            text="ʏᴏᴜᴛᴜʙᴇ 🎄",
-                            url=link,
-                        )
+                        InlineKeyboardButton("▶️ Watch", url=link),
                     ],
                 ]
             )
-            searched_text = f"""
-❄ <b>ᴛɪᴛʟᴇ :</b> <a href={link}>{title}</a>
 
-⏳ <b>ᴅᴜʀᴀᴛɪᴏɴ :</b> {duration} ᴍɪɴᴜᴛᴇs
-👀 <b>ᴠɪᴇᴡs :</b> <code>{views}</code>
-🎥 <b>ᴄʜᴀɴɴᴇʟ :</b> <a href={channellink}>{channel}</a>
-⏰ <b>ᴘᴜʙʟɪsʜᴇᴅ ᴏɴ :</b> {published}
+            caption = f"""
+🎧 <b>{title}</b>
 
+⏱ Duration: {duration}
+👀 Views: <code>{views}</code>
+📺 Channel: <a href="{channellink}">{channel}</a>
+📅 Published: {published}
 
-<u><b>➻ ɪɴʟɪɴᴇ sᴇᴀʀᴄʜ ᴍᴏᴅᴇ ʙʏ {app.name}</b></u>"""
-            answers.append(
+✨ Powered by {app.mention}
+"""
+
+            results_list.append(
                 InlineQueryResultPhoto(
                     photo_url=thumbnail,
-                    title=title,
                     thumb_url=thumbnail,
+                    title=title,
                     description=description,
-                    caption=searched_text,
+                    caption=caption,
                     reply_markup=buttons,
                 )
             )
-        try:
-            return await client.answer_inline_query(query.id, results=answers)
-        except:
-            return
 
+        return await client.answer_inline_query(
+            query.id,
+            results=results_list,
+            cache_time=5,
+            is_personal=True
+        )
 
-# ©️ Copyright Reserved - @NoxxOP  Nand Yaduwanshi
-
-# ===========================================
-# ©️ 2025 Nand Yaduwanshi (aka @NoxxOP)
-# 🔗 GitHub : https://github.com/NoxxOP/ShrutiMusic
-# 📢 Telegram Channel : https://t.me/ShrutiBots
-# ===========================================
-
-
-# ❤️ Love From ShrutiBots 
+    except Exception as e:
+        print(e)
+        return
