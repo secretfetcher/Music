@@ -2,219 +2,116 @@ import time
 
 from pyrogram import filters
 from pyrogram.enums import ChatType
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from py_yt import VideosSearch
+from pyrogram.types import InlineKeyboardMarkup, Message
+from pyrogram.raw.functions.messages import SendReaction
+from pyrogram.raw.types import ReactionEmoji
+
 import config
 from ShrutiMusic import app
 from ShrutiMusic.misc import _boot_
-from ShrutiMusic.plugins.sudo.sudoers import sudoers_list
-from ShrutiMusic.utils.database import (
-    add_served_chat,
-    add_served_user,
-    blacklisted_chats,
-    get_lang,
-    is_banned_user,
-    is_on_off,
-)
+from ShrutiMusic.utils.database import add_served_chat, add_served_user
 from ShrutiMusic.utils import bot_sys_stats
 from ShrutiMusic.utils.decorators.language import LanguageStart
 from ShrutiMusic.utils.formatters import get_readable_time
-from ShrutiMusic.utils.inline import help_pannel_page1, private_panel, start_panel
+from ShrutiMusic.utils.inline import private_panel, start_panel
 from config import BANNED_USERS
-from strings import get_string
 
 
+# 🔥 Auto Reaction
+async def auto_react(client, message):
+    try:
+        await client.invoke(
+            SendReaction(
+                peer=await client.resolve_peer(message.chat.id),
+                msg_id=message.id,
+                reaction=[ReactionEmoji(emoticon="🔥")]
+            )
+        )
+    except:
+        pass
+
+
+# ================= PRIVATE START =================
 @app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
 @LanguageStart
 async def start_pm(client, message: Message, _):
     await add_served_user(message.from_user.id)
-    if len(message.text.split()) > 1:
-        name = message.text.split(None, 1)[1]
-        if name[0:4] == "help":
-            keyboard = help_pannel_page1(_)
-            try:
-                return await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["help_1"].format(config.SUPPORT_GROUP),
-                    reply_markup=keyboard,
-                    message_effect_id=5159385139981059251,
-                )
-            except:
-                return await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["help_1"].format(config.SUPPORT_GROUP),
-                    reply_markup=keyboard,
-                )
-        if name[0:3] == "sud":
-            await sudoers_list(client=client, message=message, _=_)
-            if await is_on_off(2):
-                return await app.send_message(
-                    chat_id=config.LOG_GROUP_ID,
-                    text=f"{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ ᴛᴏ ᴄʜᴇᴄᴋ <b>sᴜᴅᴏʟɪsᴛ</b>.\n\n<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
-                )
-            return
-        if name[0:3] == "inf":
-            m = await message.reply_text("🔎")
-            query = (str(name)).replace("info_", "", 1)
-            query = f"https://www.youtube.com/watch?v={query}"
-            results = VideosSearch(query, limit=1)
-            for result in (await results.next())["result"]:
-                title = result["title"]
-                duration = result["duration"]
-                views = result["viewCount"]["short"]
-                thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-                channellink = result["channel"]["link"]
-                channel = result["channel"]["name"]
-                link = result["link"]
-                published = result["publishedTime"]
-            searched_text = _["start_6"].format(
-                title, duration, views, published, channellink, channel, app.mention
-            )
-            key = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(text=_["S_B_8"], url=link),
-                        InlineKeyboardButton(text=_["S_B_9"], url=config.SUPPORT_GROUP),
-                    ],
-                ]
-            )
-            await m.delete()
-            try:
-                await app.send_photo(
-                    chat_id=message.chat.id,
-                    photo=thumbnail,
-                    caption=searched_text,
-                    reply_markup=key,
-                    message_effect_id=5159385139981059251,
-                )
-            except:
-                await app.send_photo(
-                    chat_id=message.chat.id,
-                    photo=thumbnail,
-                    caption=searched_text,
-                    reply_markup=key,
-                )
-            if await is_on_off(2):
-                return await app.send_message(
-                    chat_id=config.LOG_GROUP_ID,
-                    text=f"{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ ᴛᴏ ᴄʜᴇᴄᴋ <b>ᴛʀᴀᴄᴋ ɪɴғᴏʀᴍᴀᴛɪᴏɴ</b>.\n\n<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
-                )
-        if name == "start":
-            out = private_panel(_)
-            UP, CPU, RAM, DISK = await bot_sys_stats()
-            try:
-                await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["start_2"].format(message.from_user.mention, app.mention, UP, DISK, CPU, RAM),
-                    reply_markup=InlineKeyboardMarkup(out),
-                    message_effect_id=5159385139981059251,
-                )
-            except:
-                await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["start_2"].format(message.from_user.mention, app.mention, UP, DISK, CPU, RAM),
-                    reply_markup=InlineKeyboardMarkup(out),
-                )
-            if await is_on_off(2):
-                return await app.send_message(
-                    chat_id=config.LOG_GROUP_ID,
-                    text=f"{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ.\n\n<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
-                )
-    else:
-        out = private_panel(_)
-        UP, CPU, RAM, DISK = await bot_sys_stats()
-        try:
-            await message.reply_photo(
-                photo=config.START_IMG_URL,
-                caption=_["start_2"].format(message.from_user.mention, app.mention, UP, DISK, CPU, RAM),
-                reply_markup=InlineKeyboardMarkup(out),
-                message_effect_id=5159385139981059251,
-            )
-        except:
-            await message.reply_photo(
-                photo=config.START_IMG_URL,
-                caption=_["start_2"].format(message.from_user.mention, app.mention, UP, DISK, CPU, RAM),
-                reply_markup=InlineKeyboardMarkup(out),
-            )
-        if await is_on_off(2):
-            return await app.send_message(
-                chat_id=config.LOG_GROUP_ID,
-                text=f"{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ.\n\n<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
-            )
 
+    # ❤️ Auto reaction
+    await auto_react(client, message)
 
-@app.on_message(filters.command(["start"]) & filters.group & ~BANNED_USERS)
-@LanguageStart
-async def start_gp(client, message: Message, _):
-    out = start_panel(_)
-    uptime = int(time.time() - _boot_)
+    out = private_panel(_)
+    UP, CPU, RAM, DISK = await bot_sys_stats()
+
+    caption = f"""
+✨ **WELCOME TO PREMIUM MUSIC BOT** ✨
+
+👤 User: {message.from_user.mention}
+🤖 Bot: {app.mention}
+
+🔥 Features:
+➤ Fast Music Streaming
+➤ 24/7 Active
+➤ Premium UI
+
+🎧 Try: /play song name
+"""
+
     try:
         await message.reply_photo(
             photo=config.START_IMG_URL,
-            caption=_["start_1"].format(app.mention, get_readable_time(uptime)),
+            caption=caption,
             reply_markup=InlineKeyboardMarkup(out),
-            message_effect_id=5159385139981059251,
         )
     except:
+        await message.reply_text(caption)
+
+
+# ================= GROUP START =================
+@app.on_message(filters.command(["start"]) & filters.group & ~BANNED_USERS)
+@LanguageStart
+async def start_gp(client, message: Message, _):
+
+    await auto_react(client, message)
+
+    out = start_panel(_)
+    uptime = int(time.time() - _boot_)
+
+    text = f"""
+🔥 {app.mention} is running!
+
+⏱ Uptime: {get_readable_time(uptime)}
+🎧 Use /play to start music
+"""
+
+    try:
         await message.reply_photo(
             photo=config.START_IMG_URL,
-            caption=_["start_1"].format(app.mention, get_readable_time(uptime)),
+            caption=text,
             reply_markup=InlineKeyboardMarkup(out),
         )
+    except:
+        await message.reply_text(text)
+
     return await add_served_chat(message.chat.id)
 
 
+# ================= WELCOME =================
 @app.on_message(filters.new_chat_members, group=-1)
 async def welcome(client, message: Message):
     for member in message.new_chat_members:
-        try:
-            language = await get_lang(message.chat.id)
-            _ = get_string(language)
-            if await is_banned_user(member.id):
-                try:
-                    await message.chat.ban_member(member.id)
-                except:
-                    pass
-            if member.id == app.id:
-                if message.chat.type != ChatType.SUPERGROUP:
-                    await message.reply_text(_["start_4"])
-                    return await app.leave_chat(message.chat.id)
-                if message.chat.id in await blacklisted_chats():
-                    await message.reply_text(
-                        _["start_5"].format(
-                            app.mention,
-                            f"https://t.me/{app.username}?start=sudolist",
-                            config.SUPPORT_GROUP,
-                        ),
-                        disable_web_page_preview=True,
-                    )
-                    return await app.leave_chat(message.chat.id)
+        if member.id == app.id:
+            out = start_panel("en")
 
-                out = start_panel(_)
-                try:
-                    await message.reply_photo(
-                        photo=config.START_IMG_URL,
-                        caption=_["start_3"].format(
-                            message.from_user.first_name,
-                            app.mention,
-                            message.chat.title,
-                            app.mention,
-                        ),
-                        reply_markup=InlineKeyboardMarkup(out),
-                        message_effect_id=5159385139981059251,
-                    )
-                except:
-                    await message.reply_photo(
-                        photo=config.START_IMG_URL,
-                        caption=_["start_3"].format(
-                            message.from_user.first_name,
-                            app.mention,
-                            message.chat.title,
-                            app.mention,
-                        ),
-                        reply_markup=InlineKeyboardMarkup(out),
-                    )
-                await add_served_chat(message.chat.id)
-                await message.stop_propagation()
-        except Exception as ex:
-            print(ex)
+            try:
+                await message.reply_photo(
+                    photo=config.START_IMG_URL,
+                    caption="🎉 Thanks for adding me!\n\n👉 Use /play to start music",
+                    reply_markup=InlineKeyboardMarkup(out),
+                )
+            except:
+                await message.reply_text(
+                    "🎉 Thanks for adding me!\n\n👉 Use /play to start music"
+                )
+
+            await add_served_chat(message.chat.id)
